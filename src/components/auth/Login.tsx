@@ -15,6 +15,8 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { useNavigation } from '@react-navigation/native'
 import { PAGES } from '../../constants/pages'
 import { NavigationProp } from '../../@types/navitagion.types'
+import { useLogin } from '../../hooks/auth/authLogin'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
 type LoginData = {
   email: string;
@@ -31,16 +33,27 @@ export default function Login() {
   });
 
   const navigation = useNavigation<NavigationProp>()
+  const {login} = useLogin()
 
   const onSubmit = (data: LoginData) => {
-    console.log("LOGIN:", data);
+    const loginData= {
+      email: data.email,
+      password: data.password
+    }
+    login(loginData)
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+     <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+        }}
+        enableOnAndroid={true}
+        extraScrollHeight={30}
+        keyboardShouldPersistTaps='handled'
+      >
       <Animated.View style={styles.card} entering={FadeInUp.duration(600)}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Sign in to continue 🍕</Text>
@@ -114,16 +127,15 @@ export default function Login() {
           Don’t have an account? <Text style={styles.link}>Sign Up</Text>
         </Text>
       </Animated.View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#fffaf5",
-    justifyContent: "center",
-    paddingHorizontal: 20,
+   	flex: 1,
+		backgroundColor: '#fffaf5',
+		paddingHorizontal: 20,
   },
   card: {
     backgroundColor: "#ffffffee",

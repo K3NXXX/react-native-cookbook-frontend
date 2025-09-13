@@ -4,42 +4,59 @@ import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
-	KeyboardAvoidingView,
-	Platform,
 	StyleSheet,
 	Text,
 	TextInput,
 	TouchableOpacity,
 	View,
 } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import Animated, { FadeInUp } from 'react-native-reanimated'
-import { PAGES } from '../../constants/pages'
 import { NavigationProp } from '../../@types/navitagion.types'
+import { PAGES } from '../../constants/pages'
+import { useRegister } from '../../hooks/auth/useRegister'
 
 type FormData = {
 	name: string
 	email: string
 	password: string
+	confirmPassword: string
 }
 
 export default function Register() {
 	const {
 		control,
 		handleSubmit,
+		watch,
 		formState: { errors, isSubmitting },
 	} = useForm<FormData>({
-		defaultValues: { name: '', email: '', password: '' },
+		defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
 	})
-
+	const { register } = useRegister()
 	const navigation = useNavigation<NavigationProp>()
+
 	const onSubmit = (data: FormData) => {
-		console.log('REGISTER:', data)
+		const registerData = {
+			name: data.name,
+			email: data.email,
+			password: data.password,
+			confirmPassword: data.confirmPassword,
+		}
+		register(registerData)
 	}
 
+	const passwordValue = watch('password')
+
 	return (
-		<KeyboardAvoidingView
+		<KeyboardAwareScrollView
 			style={styles.container}
-			behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+			contentContainerStyle={{
+				flexGrow: 1,
+				justifyContent: 'center',
+			}}
+			enableOnAndroid={true}
+			extraScrollHeight={30}
+			keyboardShouldPersistTaps='handled'
 		>
 			<Animated.View style={styles.card} entering={FadeInUp.duration(600)}>
 				<Text style={styles.title}>Sign Up</Text>
@@ -133,6 +150,37 @@ export default function Register() {
 					<Text style={styles.error}>{errors.password.message}</Text>
 				)}
 
+				<View style={styles.inputWrapper}>
+					<Ionicons
+						name='lock-closed-outline'
+						size={20}
+						color='#888'
+						style={styles.icon}
+					/>
+					<Controller
+						control={control}
+						name='confirmPassword'
+						rules={{
+							required: 'Please confirm your password',
+							validate: value =>
+								value === passwordValue || 'Passwords do not match',
+						}}
+						render={({ field: { onChange, value } }) => (
+							<TextInput
+								style={styles.input}
+								placeholder='Confirm Password'
+								placeholderTextColor='#aaa'
+								secureTextEntry
+								value={value}
+								onChangeText={onChange}
+							/>
+						)}
+					/>
+				</View>
+				{errors.confirmPassword && (
+					<Text style={styles.error}>{errors.confirmPassword.message}</Text>
+				)}
+
 				<TouchableOpacity
 					onPress={handleSubmit(onSubmit)}
 					disabled={isSubmitting}
@@ -157,7 +205,7 @@ export default function Register() {
 					Already have an account? <Text style={styles.link}>Log In</Text>
 				</Text>
 			</Animated.View>
-		</KeyboardAvoidingView>
+		</KeyboardAwareScrollView>
 	)
 }
 
@@ -165,7 +213,6 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#fffaf5',
-		justifyContent: 'center',
 		paddingHorizontal: 20,
 	},
 	card: {
