@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   FlatList,
   Image,
@@ -13,9 +13,21 @@ import {
 import Animated, { FadeInUp } from 'react-native-reanimated'
 import BottomTabs from '../ui/BottomTabs'
 import { useGetRecipes } from '../../hooks/recipes/useGetRecipes'
+import { useNavigation } from '@react-navigation/native'
+import { NavigationProp } from '../../@types/navitagion.types'
+import { PAGES } from '../../constants/pages'
 
 export default function Home() {
   const { recipes, isLoading, error } = useGetRecipes()
+  const [searchQuery, setSearchQuery] = useState('')
+  const navigation = useNavigation<NavigationProp>()
+
+  const filteredRecipes = useMemo(() => {
+    if (!recipes) return []
+    return recipes.filter(recipe =>
+      recipe.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [recipes, searchQuery])
 
   if (isLoading) return <Text style={styles.loading}>Loading recipes...</Text>
   if (error) return <Text style={styles.errorText}>❌ Failed to load recipes</Text>
@@ -24,53 +36,72 @@ export default function Home() {
     <View style={styles.container}>
       <Text style={styles.header}>Home</Text>
 
-      {/* Search bar */}
+      {/* 🔎 Пошук */}
       <View style={styles.searchWrapper}>
         <Ionicons name="search-outline" size={20} color="#888" />
         <TextInput
           placeholder="Search recipes..."
           placeholderTextColor="#aaa"
           style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color="#aaa" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Recipes list */}
-      <FlatList
-        data={recipes}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        renderItem={({ item, index }) => (
-          <Animated.View
-            style={styles.card}
-            entering={FadeInUp.duration(400).delay(index * 100)}
-          >
-            {item.image && <Image source={{ uri: item.image }} style={styles.image} />}
-            <Text style={styles.title}>{item.title}</Text>
-            {item.description && (
-              <Text style={styles.subtitle} numberOfLines={2}>
-                {item.description}
-              </Text>
-            )}
-
-            <TouchableOpacity style={{ marginTop: 10 }}>
-              <LinearGradient
-                colors={['#FF8C00', '#FF4E50']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.button}
+      {(!filteredRecipes || filteredRecipes.length === 0) ? (
+        <Text style={styles.emptyText}>😢 No recipes found. Try another search!</Text>
+      ) : (
+        <View style={styles.listWrapper}>
+          <FlatList
+            data={filteredRecipes}
+            keyExtractor={(item) => item.id.toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            renderItem={({ item, index }) => (
+              <Animated.View
+                style={styles.card}
+                entering={FadeInUp.duration(400).delay(index * 100)}
               >
-                <Ionicons
-                  name="book-outline"
-                  size={18}
-                  color="#fff"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={styles.buttonText}>View Recipe</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-      />
+                {item.image && (
+                  <Image source={{ uri: item.image }} style={styles.image} />
+                )}
+                <Text style={styles.title}>{item.title}</Text>
+                {item.description && (
+                  <Text style={styles.subtitle} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                )}
+
+                {/* 🔗 Переход на повну сторінку рецепта */}
+                <TouchableOpacity
+                  style={{ marginTop: 10 }}
+                  onPress={() => navigation.navigate(PAGES.FULL_RECIPE, { recipe: item })}
+                >
+                  <LinearGradient
+                    colors={['#FF8C00', '#FF4E50']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.button}
+                  >
+                    <Ionicons
+                      name="book-outline"
+                      size={18}
+                      color="#fff"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.buttonText}>View Recipe</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          />
+        </View>
+      )}
 
       <BottomTabs />
     </View>
@@ -106,6 +137,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: '#333',
+  },
+  listWrapper: {
+    maxHeight: 650,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#aaa',
+    marginTop: 50,
+    fontStyle: 'italic',
   },
   card: {
     backgroundColor: '#ffffffee',
@@ -158,7 +199,7 @@ const styles = StyleSheet.create({
   },
   loading: {
     textAlign: 'center',
-  marginTop: 50,
+    marginTop: 50,
     fontSize: 18,
     color: '#666',
   },

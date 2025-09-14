@@ -26,6 +26,7 @@ export default function MyRecipesList() {
 				<TouchableOpacity
 					style={styles.recipeCard}
 					activeOpacity={0.7}
+					//@ts-ignore
 					onPress={() => navigation.navigate(PAGES.FULL_RECIPE, { recipe: item })}
 				>
 					<View style={styles.imageWrapper}>

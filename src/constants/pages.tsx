@@ -3,6 +3,7 @@ export const PAGES = {
 	REGISTER: 'Register',
 	LOGIN: 'Login',
 	ADD_RECIPE: 'AddRecipe',
+	EDIT_RECIPE: 'EditRecipe',
 	Profile: 'Profile',
-	FULL_RECIPE: "FullRecipe"
+	FULL_RECIPE: "FullRecipe",
 } as const

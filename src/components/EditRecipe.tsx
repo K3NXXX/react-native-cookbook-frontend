@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
 	Image,
@@ -13,8 +14,9 @@ import {
 } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import Animated, { FadeInUp } from 'react-native-reanimated'
-import { useCreateRecipe } from '../hooks/recipes/useCreateRecipe'
-import BottomNavigation from './ui/BottomTabs'
+import { NavigationProp } from '../@types/navitagion.types'
+import { useUpdateRecipe } from '../hooks/recipes/useUpdateRecipe'
+import { PAGES } from '../constants/pages'
 
 type RecipeFormData = {
 	title: string
@@ -23,7 +25,12 @@ type RecipeFormData = {
 	image: string
 }
 
-export default function AddRecipe() {
+export default function EditRecipe() {
+	const route = useRoute<any>()
+	const { recipe } = route.params || {}
+
+	const navigation = useNavigation<NavigationProp>()
+
 	const {
 		control,
 		handleSubmit,
@@ -34,12 +41,43 @@ export default function AddRecipe() {
 	})
 
 	const [preview, setPreview] = useState<string | null>(null)
-	const { createRecipe } = useCreateRecipe()
+	const { updateRecipe } = useUpdateRecipe()
+
+	useEffect(() => {
+		if (recipe) {
+			setValue('title', recipe.title || '')
+			setValue('description', recipe.description || '')
+
+			if (Array.isArray(recipe.ingredients)) {
+				setValue(
+					'ingredients',
+					//@ts-ignore
+					recipe.ingredients.map(i => i.trim()).join('\n')
+				)
+			} else if (typeof recipe.ingredients === 'string') {
+				try {
+					const parsed = JSON.parse(recipe.ingredients)
+					if (Array.isArray(parsed)) {
+						setValue('ingredients', parsed.map(i => i.trim()).join('\n'))
+					} else {
+						setValue('ingredients', recipe.ingredients)
+					}
+				} catch {
+					setValue('ingredients', recipe.ingredients)
+				}
+			}
+
+			if (recipe.image) {
+				setPreview(recipe.image)
+				setValue('image', recipe.image)
+			}
+		}
+	}, [recipe, setValue])
 
 	const pickImage = async () => {
 		const permissionResult =
 			await ImagePicker.requestMediaLibraryPermissionsAsync()
-		if (permissionResult.granted === false) {
+		if (!permissionResult.granted) {
 			alert('Permission to access gallery is required!')
 			return
 		}
@@ -58,23 +96,33 @@ export default function AddRecipe() {
 	}
 
 	const onSubmit = (data: RecipeFormData) => {
-		console.log('data', data)
-		createRecipe(
+		updateRecipe(
 			{
-				title: data.title,
-				description: data.description,
-				image: data.image,
-				ingredients: data.ingredients.split('\n').filter(i => i.trim() !== ''),
+				id: recipe.id,
+				data: {
+					title: data.title,
+					description: data.description,
+					image: data.image,
+					ingredients: data.ingredients
+						.split('\n')
+						.filter(i => i.trim() !== ''),
+				},
 			},
 			{
 				onSuccess: () => {
-					alert('✅ Recipe created successfully!')
+					alert('✅ Recipe updated successfully!')
+					navigation.navigate(PAGES.HOME)
 				},
-				onError: (error: any) => {
-					console.error(error)
-					alert('❌ Failed to create recipe')
-				},
+				onError: () => alert('❌ Failed to update recipe'),
 			}
+		)
+	}
+
+	if (!recipe) {
+		return (
+			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+				<Text style={{ fontSize: 18, color: 'red' }}>❌ No recipe data</Text>
+			</View>
 		)
 	}
 
@@ -85,14 +133,12 @@ export default function AddRecipe() {
 			enableOnAndroid
 			extraScrollHeight={50}
 			keyboardShouldPersistTaps='handled'
-			keyboardOpeningTime={0}
-			//@ts-ignore
-			keyboardVerticalOffset={80}
 		>
 			<Animated.View style={styles.card} entering={FadeInUp.duration(600)}>
-				<Text style={styles.title}>Add Recipe</Text>
-				<Text style={styles.subtitle}>Share your favorite dish 🍲</Text>
+				<Text style={styles.title}>Edit Recipe</Text>
+				<Text style={styles.subtitle}>Update your dish ✏️</Text>
 
+				{/* Title */}
 				<View style={styles.inputWrapper}>
 					<Ionicons
 						name='restaurant-outline'
@@ -128,11 +174,10 @@ export default function AddRecipe() {
 						style={{ marginRight: 8 }}
 					/>
 					<Text style={{ color: '#555' }}>
-						{preview ? 'Change image' : 'Choose image from gallery'}
+						{preview ? 'Change image' : 'Choose image'}
 					</Text>
 				</TouchableOpacity>
 
-				{/* Preview */}
 				{preview && (
 					<Image source={{ uri: preview }} style={styles.previewImage} />
 				)}
@@ -160,22 +205,7 @@ export default function AddRecipe() {
 					<Controller
 						control={control}
 						name='ingredients'
-						rules={{
-							required: 'Ingredients are required',
-							validate: value => {
-								const lines = value.split('\n').filter(l => l.trim() !== '')
-								if (lines.length === 0)
-									return 'Please add at least one ingredient'
-
-								for (let line of lines) {
-									if (line.trim().length < 3) {
-										return 'Each ingredient must be at least 3 characters long'
-									}
-								}
-
-								return true
-							},
-						}}
+						rules={{ required: 'Ingredients are required' }}
 						render={({ field: { onChange, value } }) => (
 							<TextInput
 								style={[styles.input, { height: 100 }]}
@@ -195,7 +225,6 @@ export default function AddRecipe() {
 				<TouchableOpacity
 					onPress={handleSubmit(onSubmit)}
 					disabled={isSubmitting}
-					style={{ marginTop: 20 }}
 				>
 					<LinearGradient
 						colors={['#FF8C00', '#FF4E50']}
@@ -204,12 +233,11 @@ export default function AddRecipe() {
 						style={[styles.button, isSubmitting && { opacity: 0.7 }]}
 					>
 						<Text style={styles.buttonText}>
-							{isSubmitting ? 'Saving...' : 'Save Recipe'}
+							{isSubmitting ? 'Saving...' : 'Update Recipe'}
 						</Text>
 					</LinearGradient>
 				</TouchableOpacity>
 			</Animated.View>
-			<BottomNavigation />
 		</KeyboardAwareScrollView>
 	)
 }
@@ -220,31 +248,21 @@ const styles = StyleSheet.create({
 		backgroundColor: '#fffaf5',
 		paddingHorizontal: 20,
 	},
-	inputWrapper: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#fdfdfd',
-		borderRadius: 14,
-		paddingHorizontal: 14,
-		marginBottom: 12,
-		borderWidth: 1,
-		borderColor: '#eee',
+	scrollContent: {
+		minHeight: '100%',
+		justifyContent: 'center',
+		paddingBottom: 100,
 	},
-  scrollContent: {
-    minHeight: '100%', 
-    justifyContent: 'center', 
-    paddingBottom: 100,
-  },
-  card: {
-    backgroundColor: '#ffffffee',
-    borderRadius: 24,
-    padding: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
+	card: {
+		backgroundColor: '#ffffffee',
+		borderRadius: 24,
+		padding: 28,
+		shadowColor: '#000',
+		shadowOpacity: 0.08,
+		shadowRadius: 12,
+		shadowOffset: { width: 0, height: 4 },
+		elevation: 6,
+	},
 	title: {
 		fontSize: 28,
 		fontWeight: '800',
@@ -257,6 +275,16 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		color: '#777',
 		marginBottom: 24,
+	},
+	inputWrapper: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#fdfdfd',
+		borderRadius: 14,
+		paddingHorizontal: 14,
+		marginBottom: 12,
+		borderWidth: 1,
+		borderColor: '#eee',
 	},
 	imagePicker: {
 		flexDirection: 'row',

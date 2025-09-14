@@ -10,12 +10,14 @@ import LoginPage from './src/pages/LoginPage'
 import ProfilePage from './src/pages/ProfilePage'
 import RegisterPage from './src/pages/RegisterPage'
 import FullRecipePage from './src/pages/FullRecipePage'
+import EditRecipePage from './src/pages/EditRecipePage'
 
 export type RootStackParamList = {
 	Home: undefined
 	Register: undefined
 	Login: undefined
 	AddRecipe: undefined
+	EditRecipe: undefined
 	Profile: undefined
 	FullRecipe: undefined
 }
@@ -69,6 +71,7 @@ export default function App() {
 					<Stack.Screen name={PAGES.REGISTER} component={RegisterPage} />
 					<Stack.Screen name={PAGES.LOGIN} component={LoginPage} />
 					<Stack.Screen name={PAGES.ADD_RECIPE} component={AddRecipe} />
+					<Stack.Screen name={PAGES.EDIT_RECIPE} component={EditRecipePage} />
 					<Stack.Screen name={PAGES.Profile} component={ProfilePage} />
 					<Stack.Screen name={PAGES.FULL_RECIPE} component={FullRecipePage} />
 				</Stack.Navigator>
